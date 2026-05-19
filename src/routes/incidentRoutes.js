@@ -19,12 +19,14 @@ router.get('/:id/qrcode', protect, async (req, res) => {
 
 /**
  * @route GET /api/incidents
- * @desc Get all incidents
+ * @desc Get all incidents (paginated)
  */
 router.get('/', protect, async (req, res) => {
     try {
-        const incidents = await incidentController.getAllIncidents();
-        res.json(incidents);
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 6; // Default to 6 for better grid layout
+        const result = await incidentController.getAllIncidents(page, limit);
+        res.json(result);
     } catch (error) {
         res.status(500).json({ error: error.message });
     }

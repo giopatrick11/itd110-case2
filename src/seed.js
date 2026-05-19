@@ -75,10 +75,16 @@ const seedData = async () => {
         console.log('✓ Responders seeded');
 
         // 4. Create Incidents and Relationships
+        const getPastDate = (daysAgo) => {
+            const d = new Date();
+            d.setDate(d.getDate() - daysAgo);
+            return d.toISOString();
+        };
+
         const incidents = [
             { 
                 id: uuidv4(), title: 'Bicycle Theft', type: 'Theft', description: 'Student reported stolen bike near Parking Area B', 
-                status: 'Open', severity: 'Medium', date: now,
+                status: 'Open', severity: 'Medium', date: getPastDate(6),
                 location: 'Parking Area B',
                 witness: { first: 'Juan', last: 'Dela Cruz' },
                 victim: { first: 'Maria', last: 'Santos' },
@@ -86,15 +92,47 @@ const seedData = async () => {
             },
             { 
                 id: uuidv4(), title: 'Medical Emergency', type: 'Medical', description: 'Fainting spell in Library Plaza', 
-                status: 'Closed', severity: 'Low', date: now,
+                status: 'Closed', severity: 'Low', date: getPastDate(5),
                 location: 'Library Plaza',
                 responder: 'Nurse Reyes'
             },
             { 
                 id: uuidv4(), title: 'Suspicious Person', type: 'Investigation', description: 'Unauthorized person loitering at Main Gate', 
-                status: 'Open', severity: 'High', date: now,
+                status: 'Open', severity: 'High', date: getPastDate(4),
                 location: 'Main Gate',
                 suspect: { first: 'Robert', last: 'Tan' },
+                responder: 'Officer Garcia'
+            },
+            { 
+                id: uuidv4(), title: 'Vandalism at Plaza', type: 'Property Damage', description: 'Graffiti found on the side of the library', 
+                status: 'Open', severity: 'Low', date: getPastDate(4),
+                location: 'Library Plaza',
+                responder: 'Officer Garcia'
+            },
+            { 
+                id: uuidv4(), title: 'Unauthorized Drone', type: 'Security Violation', description: 'Drone sighted over restricted parking area', 
+                status: 'Closed', severity: 'Medium', date: getPastDate(3),
+                location: 'Parking Area B',
+                responder: 'Officer Garcia'
+            },
+            { 
+                id: uuidv4(), title: 'Severe Altercation', type: 'Physical Altercation', description: 'Heated argument turned physical at the Main Gate', 
+                status: 'Pending', severity: 'High', date: getPastDate(2),
+                location: 'Main Gate',
+                witness: { first: 'Juan', last: 'Dela Cruz' },
+                responder: 'Officer Garcia'
+            },
+            { 
+                id: uuidv4(), title: 'Minor Fire Alarm', type: 'Fire', description: 'Trash bin fire detected and extinguished', 
+                status: 'Closed', severity: 'Medium', date: getPastDate(1),
+                location: 'Library Plaza',
+                responder: 'Officer Garcia'
+            },
+            { 
+                id: uuidv4(), title: 'Package Theft', type: 'Theft', description: 'Delivery package taken from student lounge', 
+                status: 'Open', severity: 'Medium', date: getPastDate(0),
+                location: 'Main Gate',
+                victim: { first: 'Maria', last: 'Santos' },
                 responder: 'Officer Garcia'
             }
         ];

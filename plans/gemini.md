@@ -22,5 +22,7 @@ Gemini is the main development assistant for implementation, UI, dashboard, and 
 - [x] Implement QR Code Integration
 - [x] Add realistic seed data script
 - [x] Create project README.md
+- [x] Implement Incident Trends Chart (Line graph with severity filter)
+- [x] Implement Pagination for Incidents
 - [ ] Implement Evidence, Report CRUD
 

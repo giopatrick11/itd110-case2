@@ -29,6 +29,10 @@ const searchForm = document.getElementById('search-form');
 // State
 let currentSection = 'dashboard';
 let token = localStorage.getItem('token');
+let dashboardData = null;
+let trendsChart = null;
+let currentPage = 1;
+let totalPages = 1;
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
@@ -65,11 +69,21 @@ function setupEventListeners() {
     });
 
     document.querySelectorAll('.close-modal').forEach(btn => {
-        btn.addEventListener('click', () => {
-            incidentModal.classList.add('hidden');
-            detailModal.classList.add('hidden');
-            qrModal.classList.add('hidden');
-        });
+        btn.addEventListener('click', closeAllModals);
+    });
+
+    // Close on outside click
+    window.addEventListener('click', (e) => {
+        if (e.target.classList.contains('modal')) {
+            closeAllModals();
+        }
+    });
+
+    // Close on ESC key
+    window.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            closeAllModals();
+        }
     });
 
     // Forms
@@ -83,10 +97,19 @@ function setupEventListeners() {
         element.addEventListener('input', handleSearchSubmit);
     });
 
+    // Trends Filter
+    document.getElementById('severity-trend-filter').addEventListener('change', updateTrendsChart);
+
     // Backup
     document.getElementById('download-backup').addEventListener('click', () => {
         window.location.href = `${API_URL}/backup?token=${token}`; 
     });
+}
+
+function closeAllModals() {
+    incidentModal.classList.add('hidden');
+    detailModal.classList.add('hidden');
+    qrModal.classList.add('hidden');
 }
 
 function checkAuth() {
@@ -135,7 +158,8 @@ function switchSection(section) {
         loadDashboard();
     } else if (section === 'incidents') {
         incidentsSection.classList.remove('hidden');
-        loadIncidents();
+        currentPage = 1;
+        loadIncidents(1);
     } else if (section === 'search') {
         searchSection.classList.remove('hidden');
     }
@@ -213,11 +237,14 @@ async function loadDashboard() {
         const response = await authFetch(`${API_URL}/dashboard`);
         if (response.status === 401) return handleLogout();
         const data = await response.json();
+        dashboardData = data;
         
         document.getElementById('stat-incidents').textContent = data.summary.totalIncidents;
         document.getElementById('stat-locations').textContent = data.summary.totalLocations;
         document.getElementById('stat-persons').textContent = data.summary.totalPersons;
         document.getElementById('stat-responders').textContent = data.summary.totalResponders;
+
+        updateTrendsChart();
 
         const recentList = document.getElementById('recent-incidents-list');
         if (data.recentIncidents.length === 0) {
@@ -247,14 +274,120 @@ async function loadDashboard() {
     }
 }
 
-async function loadIncidents() {
+function updateTrendsChart() {
+    if (!dashboardData || !dashboardData.trends) return;
+
+    const filter = document.getElementById('severity-trend-filter').value;
+    const trends = dashboardData.trends;
+
+    // Group by date
+    const dateGroups = {};
+    trends.forEach(t => {
+        if (filter !== 'all' && t.severity !== filter) return;
+        
+        if (!dateGroups[t.date]) dateGroups[t.date] = 0;
+        dateGroups[t.date] += t.count;
+    });
+
+    const labels = Object.keys(dateGroups).sort();
+    const values = labels.map(date => dateGroups[date]);
+
+    if (trendsChart) {
+        trendsChart.data.labels = labels;
+        trendsChart.data.datasets[0].data = values;
+        trendsChart.data.datasets[0].label = `Incidents (${filter})`;
+        trendsChart.update();
+    } else {
+        const ctx = document.getElementById('incident-trends-chart').getContext('2d');
+        trendsChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: `Incidents (${filter})`,
+                    data: values,
+                    borderColor: '#2563eb',
+                    backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                    tension: 0.3,
+                    fill: true,
+                    pointRadius: 4,
+                    pointBackgroundColor: '#2563eb'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1
+                        },
+                        grid: {
+                            color: '#f1f5f9'
+                        }
+                    },
+                    x: {
+                        grid: {
+                            display: false
+                        }
+                    }
+                }
+            }
+        });
+    }
+}
+
+async function loadIncidents(page = 1) {
     try {
-        const response = await authFetch(`${API_URL}/incidents`);
-        const incidents = await response.json();
-        renderIncidentList(incidents, 'incident-list-container');
+        const response = await authFetch(`${API_URL}/incidents?page=${page}&limit=6`);
+        const data = await response.json();
+        
+        currentPage = data.page;
+        totalPages = data.totalPages;
+        
+        renderIncidentList(data.incidents, 'incident-list-container');
+        renderPagination();
     } catch (error) {
         console.error('Error loading incidents:', error);
     }
+}
+
+function renderPagination() {
+    const container = document.getElementById('pagination-container');
+    if (!container) return;
+    
+    if (totalPages <= 1) {
+        container.innerHTML = '';
+        return;
+    }
+
+    let html = `
+        <button onclick="changePage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>&laquo; Prev</button>
+    `;
+
+    for (let i = 1; i <= totalPages; i++) {
+        html += `
+            <button onclick="changePage(${i})" class="${currentPage === i ? 'active' : ''}">${i}</button>
+        `;
+    }
+
+    html += `
+        <button onclick="changePage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}>Next &raquo;</button>
+    `;
+
+    container.innerHTML = html;
+}
+
+function changePage(page) {
+    if (page < 1 || page > totalPages) return;
+    loadIncidents(page);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function renderIncidentList(incidents, containerId) {
@@ -277,7 +410,7 @@ function renderIncidentList(incidents, containerId) {
             <h3>${i.title}</h3>
             <p>${i.description.substring(0, 120)}${i.description.length > 120 ? '...' : ''}</p>
             <div style="display: flex; gap: 0.75rem;">
-                <button onclick="viewIncidentDetail('${i.id}')" class="btn btn-primary" style="flex: 1; font-size: 0.8125rem;">View Graph</button>
+                <button onclick="viewIncidentDetail('${i.id}')" class="btn btn-primary" style="flex: 1; font-size: 0.8125rem;">View</button>
                 <button onclick="showQRCode('${i.id}')" class="btn btn-secondary" style="font-size: 0.8125rem;">QR Code</button>
             </div>
         </div>
@@ -299,7 +432,7 @@ async function handleIncidentSubmit(e) {
         if (response.ok) {
             incidentModal.classList.add('hidden');
             incidentForm.reset();
-            if (currentSection === 'incidents') loadIncidents();
+            if (currentSection === 'incidents') loadIncidents(1);
             else if (currentSection === 'dashboard') loadDashboard();
         }
     } catch (error) {

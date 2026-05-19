@@ -64,6 +64,12 @@ const getDashboardMetrics = async () => {
             ORDER BY l.name
         `);
 
+        const trendsResult = await session.run(`
+            MATCH (i:Incident)
+            RETURN substring(i.date, 0, 10) as date, i.severity as severity, count(i) as count
+            ORDER BY date ASC
+        `);
+
         const summary = summaryResult.records[0];
 
         return {
@@ -78,7 +84,12 @@ const getDashboardMetrics = async () => {
             incidentsBySeverity: severityResult.records.map(r => ({ name: r.get('name'), value: r.get('value').toInt() })),
             incidentsByLocation: locationStatsResult.records.map(r => ({ name: r.get('name'), value: r.get('value').toInt() })),
             recentIncidents: recentIncidentsResult.records.map(r => r.get('i').properties),
-            highRiskLocations: highRiskLocationsResult.records.map(r => r.get('l').properties)
+            highRiskLocations: highRiskLocationsResult.records.map(r => r.get('l').properties),
+            trends: trendsResult.records.map(r => ({
+                date: r.get('date'),
+                severity: r.get('severity'),
+                count: r.get('count').toInt()
+            }))
         };
     } finally {
         await session.close();

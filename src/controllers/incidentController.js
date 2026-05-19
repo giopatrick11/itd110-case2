@@ -1,16 +1,38 @@
 const { getSession } = require('../config/neo4j');
 const { v4: uuidv4 } = require('uuid');
+const neo4j = require('neo4j-driver');
 
 /**
- * Get all incidents
+ * Get all incidents with pagination
  */
-const getAllIncidents = async () => {
+const getAllIncidents = async (page = 1, limit = 10) => {
     const session = getSession();
+    const skip = (page - 1) * limit;
+    
     try {
         const result = await session.run(
-            'MATCH (i:Incident) RETURN i ORDER BY i.createdAt DESC'
+            `MATCH (i:Incident)
+             WITH count(i) as total
+             MATCH (i:Incident)
+             RETURN i, total
+             ORDER BY i.createdAt DESC
+             SKIP $skip LIMIT $limit`,
+            { 
+                skip: neo4j.int(parseInt(skip)), 
+                limit: neo4j.int(parseInt(limit)) 
+            }
         );
-        return result.records.map(record => record.get('i').properties);
+        
+        const incidents = result.records.map(record => record.get('i').properties);
+        const total = result.records.length > 0 ? result.records[0].get('total').toInt() : 0;
+        
+        return {
+            incidents,
+            total,
+            page: parseInt(page),
+            limit: parseInt(limit),
+            totalPages: Math.ceil(total / limit)
+        };
     } finally {
         await session.close();
     }
