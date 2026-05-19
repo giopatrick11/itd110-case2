@@ -77,11 +77,14 @@ function setupEventListeners() {
     registerForm.addEventListener('submit', handleRegister);
     incidentForm.addEventListener('submit', handleIncidentSubmit);
     searchForm.addEventListener('submit', handleSearchSubmit);
+    
+    // Live Search
+    searchForm.querySelectorAll('input, select').forEach(element => {
+        element.addEventListener('input', handleSearchSubmit);
+    });
 
     // Backup
     document.getElementById('download-backup').addEventListener('click', () => {
-        // Since backup is protected, we'll try a standard download link first
-        // If it fails due to auth, we might need a different approach for protected downloads
         window.location.href = `${API_URL}/backup?token=${token}`; 
     });
 }
@@ -156,7 +159,7 @@ async function handleLogin(e) {
             token = result.token;
             localStorage.setItem('token', token);
             checkAuth();
-            handleHashChange(); // Check if we should open a detail view after login
+            handleHashChange();
         } else {
             alert(result.error || 'Login failed');
         }
@@ -196,7 +199,6 @@ function handleLogout() {
     checkAuth();
 }
 
-// Authenticated Fetch Helper
 async function authFetch(url, options = {}) {
     const headers = {
         ...options.headers,
@@ -218,20 +220,28 @@ async function loadDashboard() {
         document.getElementById('stat-responders').textContent = data.summary.totalResponders;
 
         const recentList = document.getElementById('recent-incidents-list');
-        recentList.innerHTML = data.recentIncidents.map(i => `
-            <li>
-                <strong>${i.title}</strong><br>
-                <small>${i.type} | ${new Date(i.date).toLocaleDateString()}</small>
-            </li>
-        `).join('');
+        if (data.recentIncidents.length === 0) {
+            recentList.innerHTML = '<li class="text-muted">No recent incidents recorded.</li>';
+        } else {
+            recentList.innerHTML = data.recentIncidents.map(i => `
+                <li>
+                    <strong>${i.title}</strong><br>
+                    <small style="color: var(--text-muted)">${i.type} | ${new Date(i.date).toLocaleDateString()}</small>
+                </li>
+            `).join('');
+        }
 
         const riskList = document.getElementById('high-risk-locations-list');
-        riskList.innerHTML = data.highRiskLocations.map(l => `
-            <li>
-                <strong>${l.name}</strong> - ${l.riskLevel}<br>
-                <small>${l.address}</small>
-            </li>
-        `).join('');
+        if (data.highRiskLocations.length === 0) {
+            riskList.innerHTML = '<li class="text-muted">No high risk locations identified.</li>';
+        } else {
+            riskList.innerHTML = data.highRiskLocations.map(l => `
+                <li>
+                    <strong style="color: var(--danger)">${l.name}</strong> - ${l.riskLevel}<br>
+                    <small style="color: var(--text-muted)">${l.address}</small>
+                </li>
+            `).join('');
+        }
     } catch (error) {
         console.error('Error loading dashboard:', error);
     }
@@ -250,19 +260,25 @@ async function loadIncidents() {
 function renderIncidentList(incidents, containerId) {
     const container = document.getElementById(containerId);
     if (!incidents || incidents.length === 0) {
-        container.innerHTML = '<p>No incidents found.</p>';
+        container.innerHTML = `
+            <div class="empty-state">
+                <p>No incidents found matching your criteria.</p>
+            </div>
+        `;
         return;
     }
 
     container.innerHTML = incidents.map(i => `
         <div class="card">
-            <span class="badge badge-${i.status}">${i.status}</span>
-            <span class="badge badge-${i.severity}">${i.severity}</span>
+            <div class="card-header">
+                <span class="badge badge-${i.severity}">${i.severity}</span>
+                <span class="badge badge-${i.status}">${i.status}</span>
+            </div>
             <h3>${i.title}</h3>
-            <p>${i.description.substring(0, 100)}${i.description.length > 100 ? '...' : ''}</p>
-            <div style="margin-top: 1rem; display: flex; gap: 0.5rem;">
-                <button onclick="viewIncidentDetail('${i.id}')" class="btn-primary" style="padding: 0.4rem 0.8rem; font-size: 0.9rem;">View Graph</button>
-                <button onclick="showQRCode('${i.id}')" class="btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.9rem;">QR Code</button>
+            <p>${i.description.substring(0, 120)}${i.description.length > 120 ? '...' : ''}</p>
+            <div style="display: flex; gap: 0.75rem;">
+                <button onclick="viewIncidentDetail('${i.id}')" class="btn btn-primary" style="flex: 1; font-size: 0.8125rem;">View Graph</button>
+                <button onclick="showQRCode('${i.id}')" class="btn btn-secondary" style="font-size: 0.8125rem;">QR Code</button>
             </div>
         </div>
     `).join('');
@@ -318,38 +334,53 @@ async function viewIncidentDetail(id) {
         document.getElementById('detail-title').textContent = data.title;
         
         let html = `
-            <div class="detail-info">
-                <p><strong>Status:</strong> ${data.status} | <strong>Severity:</strong> ${data.severity}</p>
-                <p><strong>Type:</strong> ${data.type} | <strong>Date:</strong> ${new Date(data.date).toLocaleString()}</p>
-                <p style="margin-top: 1rem;">${data.description}</p>
+            <div style="margin-bottom: 2rem;">
+                <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
+                    <span class="badge badge-${data.status}">${data.status}</span>
+                    <span class="badge badge-${data.severity}">${data.severity}</span>
+                    <span class="badge" style="background: #f1f5f9; color: var(--text-muted)">${data.type}</span>
+                </div>
+                <p style="color: var(--text-muted); font-size: 0.875rem; margin-bottom: 1rem;">Occurred on ${new Date(data.date).toLocaleString()}</p>
+                <p style="font-size: 1rem; line-height: 1.6;">${data.description}</p>
             </div>
-            <hr style="margin: 1.5rem 0;">
-            <div class="graph-connections">
-                <h3>Graph Relationships</h3>
-                <div style="margin-top: 1rem;">
-                    <strong>Location (OCCURRED_AT):</strong>
-                    ${data.location ? `
-                        <div class="card" style="margin-top: 0.5rem; background: #f9f9f9;">
-                            <p><strong>${data.location.name}</strong></p>
-                            <p><small>${data.location.address}</small></p>
-                        </div>
-                    ` : '<p>None connected</p>'}
+            
+            <div style="background: var(--bg-main); padding: 1.5rem; border-radius: 12px; border: 1px solid var(--border);">
+                <h4 style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin-bottom: 1rem;">Graph Connections</h4>
+                
+                <div style="margin-bottom: 1.5rem;">
+                    <p style="font-size: 0.875rem; font-weight: 600; margin-bottom: 0.5rem;">Location</p>
+                    <div class="chip-container">
+                        ${data.location ? `
+                            <div class="chip">
+                                <span class="chip-label">OCCURRED_AT</span>
+                                <span>${data.location.name}</span>
+                            </div>
+                        ` : '<span style="color: var(--text-muted); font-size: 0.875rem;">No location associated</span>'}
+                    </div>
                 </div>
-                <div style="margin-top: 1rem;">
-                    <strong>Involved Persons:</strong>
-                    ${data.persons && data.persons.length > 0 ? data.persons.map(p => `
-                        <div class="card" style="margin-top: 0.5rem; background: #f9f9f9;">
-                            <p><strong>${p.person.firstName} ${p.person.lastName}</strong> - <span class="badge badge-Open" style="background: #3498db;">${p.relationship}</span></p>
-                        </div>
-                    `).join('') : '<p>None connected</p>'}
+
+                <div style="margin-bottom: 1.5rem;">
+                    <p style="font-size: 0.875rem; font-weight: 600; margin-bottom: 0.5rem;">People Involved</p>
+                    <div class="chip-container">
+                        ${data.persons && data.persons.length > 0 ? data.persons.map(p => `
+                            <div class="chip">
+                                <span class="chip-label">${p.relationship}</span>
+                                <span>${p.person.firstName} ${p.person.lastName}</span>
+                            </div>
+                        `).join('') : '<span style="color: var(--text-muted); font-size: 0.875rem;">No people associated</span>'}
+                    </div>
                 </div>
-                <div style="margin-top: 1rem;">
-                    <strong>Responders (RESPONDED_TO):</strong>
-                    ${data.responders && data.responders.length > 0 ? data.responders.map(r => `
-                        <div class="card" style="margin-top: 0.5rem; background: #f9f9f9;">
-                            <p><strong>${r.name}</strong> (${r.agency})</p>
-                        </div>
-                    `).join('') : '<p>None connected</p>'}
+
+                <div>
+                    <p style="font-size: 0.875rem; font-weight: 600; margin-bottom: 0.5rem;">Emergency Responders</p>
+                    <div class="chip-container">
+                        ${data.responders && data.responders.length > 0 ? data.responders.map(r => `
+                            <div class="chip">
+                                <span class="chip-label">RESPONDED_TO</span>
+                                <span>${r.name} (${r.agency})</span>
+                            </div>
+                        `).join('') : '<span style="color: var(--text-muted); font-size: 0.875rem;">No responders associated</span>'}
+                    </div>
                 </div>
             </div>
         `;
@@ -358,7 +389,6 @@ async function viewIncidentDetail(id) {
         detailModal.classList.remove('hidden');
     } catch (error) {
         console.error('Error loading incident details:', error);
-        alert('Could not find incident details.');
     }
 }
 
