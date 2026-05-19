@@ -2,10 +2,10 @@ const API_URL = '/api';
 
 // DOM Elements
 const loginSection = document.getElementById('login-section');
-const registerSection = document.getElementById('register-section');
 const dashboardSection = document.getElementById('dashboard-section');
 const incidentsSection = document.getElementById('incidents-section');
 const searchSection = document.getElementById('search-section');
+const approvalsSection = document.getElementById('approvals-section');
 
 const mainNav = document.getElementById('main-nav');
 const authNav = document.getElementById('auth-nav');
@@ -14,21 +14,25 @@ const navButtons = {
     dashboard: document.getElementById('show-dashboard'),
     incidents: document.getElementById('show-incidents'),
     search: document.getElementById('show-search'),
+    approvals: document.getElementById('show-approvals'),
     logout: document.getElementById('logout-btn')
 };
 
 const loginForm = document.getElementById('login-form');
-const registerForm = document.getElementById('register-form');
+const registerModal = document.getElementById('register-modal');
 const incidentModal = document.getElementById('incident-modal');
 const detailModal = document.getElementById('detail-modal');
 const qrModal = document.getElementById('qr-modal');
 
+const registerForm = document.getElementById('register-form');
 const incidentForm = document.getElementById('incident-form');
 const searchForm = document.getElementById('search-form');
 
 // State
 let currentSection = 'dashboard';
 let token = localStorage.getItem('token');
+let userName = localStorage.getItem('userName');
+let userRole = localStorage.getItem('userRole');
 let dashboardData = null;
 let trendsChart = null;
 let currentPage = 1;
@@ -48,24 +52,16 @@ function setupEventListeners() {
     navButtons.dashboard.addEventListener('click', () => switchSection('dashboard'));
     navButtons.incidents.addEventListener('click', () => switchSection('incidents'));
     navButtons.search.addEventListener('click', () => switchSection('search'));
+    navButtons.approvals.addEventListener('click', () => switchSection('approvals'));
     navButtons.logout.addEventListener('click', handleLogout);
-
-    // Auth Toggles
-    document.getElementById('toggle-register').addEventListener('click', (e) => {
-        e.preventDefault();
-        loginSection.classList.add('hidden');
-        registerSection.classList.remove('hidden');
-    });
-
-    document.getElementById('toggle-login').addEventListener('click', (e) => {
-        e.preventDefault();
-        registerSection.classList.add('hidden');
-        loginSection.classList.remove('hidden');
-    });
 
     // Modals
     document.getElementById('open-incident-form').addEventListener('click', () => {
         incidentModal.classList.remove('hidden');
+    });
+
+    document.getElementById('open-register-form').addEventListener('click', () => {
+        registerModal.classList.remove('hidden');
     });
 
     document.querySelectorAll('.close-modal').forEach(btn => {
@@ -108,16 +104,45 @@ function setupEventListeners() {
 
 function closeAllModals() {
     incidentModal.classList.add('hidden');
+    registerModal.classList.add('hidden');
     detailModal.classList.add('hidden');
     qrModal.classList.add('hidden');
 }
 
-function checkAuth() {
+async function checkAuth() {
     if (token) {
+        // If we have a token but no role/name (e.g. from an old session), fetch it
+        if (!userName || !userRole) {
+            try {
+                const response = await authFetch(`${API_URL}/auth/me`);
+                if (response.ok) {
+                    const user = await response.json();
+                    userName = user.name;
+                    userRole = user.role;
+                    localStorage.setItem('userName', userName);
+                    localStorage.setItem('userRole', userRole);
+                } else {
+                    return handleLogout();
+                }
+            } catch (error) {
+                return handleLogout();
+            }
+        }
+
         mainNav.classList.remove('hidden');
         authNav.classList.add('hidden');
         loginSection.classList.add('hidden');
-        registerSection.classList.add('hidden');
+
+        if (userName) {
+            document.getElementById('user-display').textContent = userName.toUpperCase();
+        }
+
+        if (userRole === 'Admin') {
+            navButtons.approvals.classList.remove('hidden');
+        } else {
+            navButtons.approvals.classList.add('hidden');
+        }
+
         if (!window.location.hash.includes('incident=')) {
             switchSection('dashboard');
         }
@@ -145,6 +170,7 @@ function hideMainSections() {
     dashboardSection.classList.add('hidden');
     incidentsSection.classList.add('hidden');
     searchSection.classList.add('hidden');
+    approvalsSection.classList.add('hidden');
 }
 
 function switchSection(section) {
@@ -162,6 +188,9 @@ function switchSection(section) {
         loadIncidents(1);
     } else if (section === 'search') {
         searchSection.classList.remove('hidden');
+    } else if (section === 'approvals') {
+        approvalsSection.classList.remove('hidden');
+        loadApprovals();
     }
 }
 
@@ -181,7 +210,11 @@ async function handleLogin(e) {
         const result = await response.json();
         if (response.ok) {
             token = result.token;
+            userName = result.user.name;
+            userRole = result.user.role;
             localStorage.setItem('token', token);
+            localStorage.setItem('userName', userName);
+            localStorage.setItem('userRole', userRole);
             checkAuth();
             handleHashChange();
         } else {
@@ -205,12 +238,13 @@ async function handleRegister(e) {
         });
 
         if (response.ok) {
-            alert('Registration successful! Please login.');
-            registerSection.classList.add('hidden');
-            loginSection.classList.remove('hidden');
+            alert('Personnel account created successfully!');
+            registerModal.classList.add('hidden');
+            registerForm.reset();
+            if (currentSection === 'approvals') loadApprovals();
         } else {
             const result = await response.json();
-            alert(result.error || 'Registration failed');
+            alert(result.error || 'Account creation failed');
         }
     } catch (error) {
         console.error('Registration error:', error);
@@ -219,7 +253,11 @@ async function handleRegister(e) {
 
 function handleLogout() {
     localStorage.removeItem('token');
+    localStorage.removeItem('userName');
+    localStorage.removeItem('userRole');
     token = null;
+    userName = null;
+    userRole = null;
     checkAuth();
 }
 
@@ -537,5 +575,70 @@ async function showQRCode(id) {
         qrModal.classList.remove('hidden');
     } catch (error) {
         console.error('Error showing QR code:', error);
+    }
+}
+
+// Admin Functions
+async function loadApprovals() {
+    try {
+        const response = await authFetch(`${API_URL}/auth/pending`);
+        const users = await response.json();
+        
+        const tbody = document.getElementById('pending-users-body');
+        if (users.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; padding: 2rem; color: var(--text-muted);">No pending access requests.</td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = users.map(u => `
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 1rem; font-weight: 600;">${u.name}</td>
+                <td style="padding: 1rem; color: var(--text-muted);">${u.email}</td>
+                <td style="padding: 1rem;">
+                    <span class="badge" style="background: #eef2ff; color: #4338ca;">${u.role}</span>
+                </td>
+                <td style="padding: 1rem; color: var(--text-muted); font-size: 0.8125rem;">${new Date(u.createdAt).toLocaleDateString()}</td>
+                <td style="padding: 1rem; text-align: right;">
+                    <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+                        <button onclick="approveUser('${u.id}')" class="btn btn-primary" style="padding: 0.375rem 0.75rem; font-size: 0.75rem; background: var(--success);">Approve</button>
+                        <button onclick="denyUser('${u.id}')" class="btn btn-danger" style="padding: 0.375rem 0.75rem; font-size: 0.75rem;">Deny</button>
+                    </div>
+                </td>
+            </tr>
+        `).join('');
+    } catch (error) {
+        console.error('Error loading approvals:', error);
+    }
+}
+
+async function approveUser(id) {
+    if (!confirm('Are you sure you want to approve this user?')) return;
+    try {
+        const response = await authFetch(`${API_URL}/auth/approve/${id}`, { method: 'POST' });
+        if (response.ok) {
+            alert('User approved successfully!');
+            loadApprovals();
+        } else {
+            const result = await response.json();
+            alert(result.error || 'Approval failed');
+        }
+    } catch (error) {
+        console.error('Error approving user:', error);
+    }
+}
+
+async function denyUser(id) {
+    if (!confirm('Are you sure you want to deny this request? This will permanently delete the user.')) return;
+    try {
+        const response = await authFetch(`${API_URL}/auth/deny/${id}`, { method: 'DELETE' });
+        if (response.ok) {
+            alert('User request denied and removed.');
+            loadApprovals();
+        } else {
+            const result = await response.json();
+            alert(result.error || 'Denial failed');
+        }
+    } catch (error) {
+        console.error('Error denying user:', error);
     }
 }

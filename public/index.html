@@ -16,9 +16,11 @@
         <div class="container">
             <h1>SafeLink</h1>
             <nav id="main-nav" class="hidden">
+                <span id="user-display" style="color: #94a3b8; font-size: 0.8125rem; font-weight: 600; margin-right: 1rem; border-right: 1px solid var(--primary-light); padding-right: 1rem;"></span>
                 <button id="show-dashboard">Dashboard</button>
                 <button id="show-incidents">Incidents</button>
                 <button id="show-search">Search</button>
+                <button id="show-approvals" class="hidden">Create Access</button>
                 <button id="download-backup" class="btn btn-secondary" style="margin-left: 1rem;">Export JSON</button>
                 <button id="logout-btn" class="btn btn-danger">Logout</button>
             </nav>
@@ -45,17 +47,15 @@
                     </div>
                     <button type="submit" class="btn btn-primary w-100" style="margin-top: 1rem;">Login to Dashboard</button>
                 </form>
-                <p style="margin-top: 1.5rem; text-align: center; font-size: 0.875rem;">
-                    Don't have an account? <a href="#" id="toggle-register" style="color: var(--accent); font-weight: 600;">Request Access</a>
-                </p>
             </div>
         </section>
 
-        <!-- Register Section -->
-        <section id="register-section" class="hidden">
-            <div class="modal-content" style="margin: 5% auto;">
-                <h2>Request System Access</h2>
-                <p style="color: var(--text-muted); margin-bottom: 2rem;">Create a new personnel account for SafeLink.</p>
+        <!-- Register Section (Now a Modal) -->
+        <div id="register-modal" class="modal hidden">
+            <div class="modal-content">
+                <span class="close-modal">&times;</span>
+                <h2>Create New Personnel Access</h2>
+                <p style="color: var(--text-muted); margin-bottom: 2rem;">Register a new user directly into the SafeLink system.</p>
                 <form id="register-form">
                     <div class="form-group">
                         <label>Full Name</label>
@@ -77,13 +77,17 @@
                             <option value="Admin">System Administrator</option>
                         </select>
                     </div>
-                    <button type="submit" class="btn btn-primary w-100" style="margin-top: 1rem;">Submit Request</button>
+                    <div class="form-group">
+                        <label>Initial Status</label>
+                        <select name="status">
+                            <option value="Active">Active (Immediate Access)</option>
+                            <option value="Pending">Pending (Requires Later Approval)</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100" style="margin-top: 1rem;">Create Personnel Account</button>
                 </form>
-                <p style="margin-top: 1.5rem; text-align: center; font-size: 0.875rem;">
-                    Already have an account? <a href="#" id="toggle-login" style="color: var(--accent); font-weight: 600;">Back to Login</a>
-                </p>
             </div>
-        </section>
+        </div>
 
         <!-- Dashboard Section -->
         <section id="dashboard-section" class="hidden">
@@ -166,6 +170,31 @@
                 <button type="submit" class="btn btn-primary">Search</button>
             </form>
             <div id="search-results" class="grid-list"></div>
+        </section>
+
+        <!-- Approvals Section -->
+        <section id="approvals-section" class="hidden">
+            <div class="section-header">
+                <h2>Create Access</h2>
+                <button id="open-register-form" class="btn btn-primary">+ Add Personnel</button>
+            </div>
+            <p style="color: var(--text-muted); margin-bottom: 2rem;">Review and manage personnel requests for system access.</p>
+            <div id="approvals-list" class="recent-list" style="max-width: 100%;">
+                <table style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr style="text-align: left; border-bottom: 2px solid var(--border);">
+                            <th style="padding: 1rem;">Name</th>
+                            <th style="padding: 1rem;">Email</th>
+                            <th style="padding: 1rem;">Requested Role</th>
+                            <th style="padding: 1rem;">Date</th>
+                            <th style="padding: 1rem; text-align: right;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="pending-users-body">
+                        <!-- Pending users will be injected here -->
+                    </tbody>
+                </table>
+            </div>
         </section>
 
         <!-- Incident Modal (Form) -->

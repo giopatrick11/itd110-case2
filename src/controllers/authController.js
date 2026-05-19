@@ -10,7 +10,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret';
  */
 const register = async (userData) => {
     const session = getSession();
-    const { name, email, password, role } = userData;
+    const { name, email, password, role, status } = userData;
     const id = uuidv4();
     const now = new Date().toISOString();
     
@@ -33,6 +33,7 @@ const register = async (userData) => {
                 email: $email,
                 passwordHash: $passwordHash,
                 role: $role,
+                status: $status,
                 createdAt: $createdAt,
                 updatedAt: $updatedAt
             }) RETURN u`,
@@ -42,6 +43,7 @@ const register = async (userData) => {
                 email,
                 passwordHash,
                 role: role || 'User',
+                status: status || 'Pending', // Use provided status or default to Pending
                 createdAt: now,
                 updatedAt: now
             }
@@ -71,6 +73,12 @@ const login = async (email, password) => {
         }
 
         const user = result.records[0].get('u').properties;
+
+        // Check if user is active
+        if (user.status !== 'Active') {
+            throw new Error('Account pending approval. Please contact a System Administrator.');
+        }
+
         const isMatch = await bcrypt.compare(password, user.passwordHash);
 
         if (!isMatch) {
@@ -85,6 +93,60 @@ const login = async (email, password) => {
 
         delete user.passwordHash;
         return { user, token };
+    } finally {
+        await session.close();
+    }
+};
+
+/**
+ * Get all pending users (Admin only)
+ */
+const getPendingUsers = async () => {
+    const session = getSession();
+    try {
+        const result = await session.run(
+            'MATCH (u:User {status: "Pending"}) RETURN u ORDER BY u.createdAt DESC'
+        );
+        return result.records.map(r => {
+            const user = r.get('u').properties;
+            delete user.passwordHash;
+            return user;
+        });
+    } finally {
+        await session.close();
+    }
+};
+
+/**
+ * Approve a user (Admin only)
+ */
+const approveUser = async (id) => {
+    const session = getSession();
+    try {
+        const result = await session.run(
+            'MATCH (u:User {id: $id}) SET u.status = "Active", u.updatedAt = $now RETURN u',
+            { id, now: new Date().toISOString() }
+        );
+        if (result.records.length === 0) return null;
+        const user = result.records[0].get('u').properties;
+        delete user.passwordHash;
+        return user;
+    } finally {
+        await session.close();
+    }
+};
+
+/**
+ * Deny/Delete a user (Admin only)
+ */
+const denyUser = async (id) => {
+    const session = getSession();
+    try {
+        const result = await session.run(
+            'MATCH (u:User {id: $id}) DETACH DELETE u RETURN count(u) as deletedCount',
+            { id }
+        );
+        return result.records[0].get('deletedCount').toInt() > 0;
     } finally {
         await session.close();
     }
@@ -114,5 +176,8 @@ const getUserById = async (id) => {
 module.exports = {
     register,
     login,
-    getUserById
+    getUserById,
+    getPendingUsers,
+    approveUser,
+    denyUser
 };

@@ -54,4 +54,54 @@ router.get('/me', protect, async (req, res) => {
     }
 });
 
+/**
+ * @route GET /api/auth/pending
+ * @desc Get all pending users (Admin only)
+ */
+router.get('/pending', protect, async (req, res) => {
+    if (req.user.role !== 'Admin') {
+        return res.status(403).json({ error: 'Access denied. Administrators only.' });
+    }
+    try {
+        const users = await authController.getPendingUsers();
+        res.json(users);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+/**
+ * @route POST /api/auth/approve/:id
+ * @desc Approve a pending user (Admin only)
+ */
+router.post('/approve/:id', protect, async (req, res) => {
+    if (req.user.role !== 'Admin') {
+        return res.status(403).json({ error: 'Access denied. Administrators only.' });
+    }
+    try {
+        const user = await authController.approveUser(req.params.id);
+        if (!user) return res.status(404).json({ error: 'User not found' });
+        res.json(user);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+/**
+ * @route DELETE /api/auth/deny/:id
+ * @desc Deny a pending user (Admin only)
+ */
+router.delete('/deny/:id', protect, async (req, res) => {
+    if (req.user.role !== 'Admin') {
+        return res.status(403).json({ error: 'Access denied. Administrators only.' });
+    }
+    try {
+        const success = await authController.denyUser(req.params.id);
+        if (!success) return res.status(404).json({ error: 'User not found' });
+        res.json({ message: 'User denied and removed.' });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 module.exports = router;

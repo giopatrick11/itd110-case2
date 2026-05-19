@@ -24,5 +24,6 @@ Gemini is the main development assistant for implementation, UI, dashboard, and 
 - [x] Create project README.md
 - [x] Implement Incident Trends Chart (Line graph with severity filter)
 - [x] Implement Pagination for Incidents
+- [x] Implement Account Approval System (Admin-gated registration)
 - [ ] Implement Evidence, Report CRUD
 
