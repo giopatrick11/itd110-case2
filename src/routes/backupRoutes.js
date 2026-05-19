@@ -1,12 +1,13 @@
 const express = require('express');
 const router = express.Router();
 const backupController = require('../controllers/backupController');
+const { protect } = require('../middleware/authMiddleware');
 
 /**
  * @route GET /api/backup
  * @desc Export all graph data as a JSON file
  */
-router.get('/', async (req, res) => {
+router.get('/', protect, async (req, res) => {
     try {
         const data = await backupController.exportBackupData();
         

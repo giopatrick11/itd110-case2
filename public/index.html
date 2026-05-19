@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SafeLink - Public Safety Incident Mapping</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>SafeLink</h1>
+            <nav id="main-nav" class="hidden">
+                <button id="show-dashboard">Dashboard</button>
+                <button id="show-incidents">Incidents</button>
+                <button id="show-search">Search</button>
+                <button id="download-backup" class="btn-secondary">Backup JSON</button>
+                <button id="logout-btn" class="btn-danger">Logout</button>
+            </nav>
+            <div id="auth-nav">
+                <button id="show-login" class="btn-secondary">Login</button>
+            </div>
+        </div>
+    </header>
+
+    <main class="container">
+        <!-- Login Section -->
+        <section id="login-section">
+            <div class="modal-content" style="margin: 5% auto; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+                <h2>Login to SafeLink</h2>
+                <form id="login-form">
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" name="email" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Password</label>
+                        <input type="password" name="password" required>
+                    </div>
+                    <button type="submit" class="btn-primary w-100">Login</button>
+                </form>
+                <p style="margin-top: 1rem; text-align: center;">
+                    Don't have an account? <a href="#" id="toggle-register">Register here</a>
+                </p>
+            </div>
+        </section>
+
+        <!-- Register Section -->
+        <section id="register-section" class="hidden">
+            <div class="modal-content" style="margin: 5% auto; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+                <h2>Register for SafeLink</h2>
+                <form id="register-form">
+                    <div class="form-group">
+                        <label>Full Name</label>
+                        <input type="text" name="name" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" name="email" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Password</label>
+                        <input type="password" name="password" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Role</label>
+                        <select name="role">
+                            <option value="Responder">Responder</option>
+                            <option value="Official">Official</option>
+                            <option value="Admin">Admin</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn-primary w-100">Register</button>
+                </form>
+                <p style="margin-top: 1rem; text-align: center;">
+                    Already have an account? <a href="#" id="toggle-login">Login here</a>
+                </p>
+            </div>
+        </section>
+
+        <!-- Dashboard Section -->
+        <section id="dashboard-section" class="hidden">
+            <h2>Dashboard</h2>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <h3 id="stat-incidents">0</h3>
+                    <p>Total Incidents</p>
+                </div>
+                <div class="stat-card">
+                    <h3 id="stat-locations">0</h3>
+                    <p>Locations</p>
+                </div>
+                <div class="stat-card">
+                    <h3 id="stat-persons">0</h3>
+                    <p>Persons</p>
+                </div>
+                <div class="stat-card">
+                    <h3 id="stat-responders">0</h3>
+                    <p>Responders</p>
+                </div>
+            </div>
+            
+            <div class="recent-grid">
+                <div class="recent-list">
+                    <h3>Recent Incidents</h3>
+                    <ul id="recent-incidents-list"></ul>
+                </div>
+                <div class="recent-list">
+                    <h3>High Risk Locations</h3>
+                    <ul id="high-risk-locations-list"></ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- Incidents Section -->
+        <section id="incidents-section" class="hidden">
+            <div class="section-header">
+                <h2>Incidents</h2>
+                <button id="open-incident-form" class="btn-primary">+ Report Incident</button>
+            </div>
+            <div id="incident-list-container" class="grid-list"></div>
+        </section>
+
+        <!-- Search Section -->
+        <section id="search-section" class="hidden">
+            <h2>Search & Filters</h2>
+            <form id="search-form" class="search-bar">
+                <input type="text" name="query" placeholder="Search by title, description, or keyword...">
+                <select name="status">
+                    <option value="">Status (All)</option>
+                    <option value="Open">Open</option>
+                    <option value="Closed">Closed</option>
+                    <option value="Pending">Pending</option>
+                </select>
+                <select name="severity">
+                    <option value="">Severity (All)</option>
+                    <option value="Low">Low</option>
+                    <option value="Medium">Medium</option>
+                    <option value="High">High</option>
+                    <option value="Critical">Critical</option>
+                </select>
+                <button type="submit" class="btn-primary">Search</button>
+            </form>
+            <div id="search-results" class="grid-list"></div>
+        </section>
+
+        <!-- Incident Modal (Form) -->
+        <div id="incident-modal" class="modal hidden">
+            <div class="modal-content">
+                <span class="close-modal">&times;</span>
+                <h2 id="modal-title">Report New Incident</h2>
+                <form id="incident-form">
+                    <div class="form-group">
+                        <label>Title</label>
+                        <input type="text" name="title" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Type</label>
+                        <input type="text" name="type" placeholder="e.g. Theft, Fire, Medical" required>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Status</label>
+                            <select name="status">
+                                <option value="Open">Open</option>
+                                <option value="Pending">Pending</option>
+                                <option value="Closed">Closed</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Severity</label>
+                            <select name="severity">
+                                <option value="Low">Low</option>
+                                <option value="Medium">Medium</option>
+                                <option value="High">High</option>
+                                <option value="Critical">Critical</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Date</label>
+                        <input type="datetime-local" name="date" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Description</label>
+                        <textarea name="description" rows="4" required></textarea>
+                    </div>
+                    <button type="submit" class="btn-primary w-100">Submit Report</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Detail Modal (Graph View) -->
+        <div id="detail-modal" class="modal hidden">
+            <div class="modal-content">
+                <span class="close-modal">&times;</span>
+                <h2 id="detail-title">Incident Details</h2>
+                <div id="detail-body"></div>
+            </div>
+        </div>
+
+        <!-- QR Code Modal -->
+        <div id="qr-modal" class="modal hidden">
+            <div class="modal-content" style="text-align: center;">
+                <span class="close-modal">&times;</span>
+                <h2>Incident QR Code</h2>
+                <div id="qr-container" style="margin: 1.5rem 0;">
+                    <img id="qr-image" src="" alt="Incident QR Code" style="max-width: 200px;">
+                </div>
+                <p id="qr-url" style="word-break: break-all; font-size: 0.9rem; color: #666;"></p>
+                <div style="margin-top: 1.5rem;">
+                    <a id="download-qr" href="" download="incident-qr.png" class="btn-secondary">Download QR Code</a>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <p>&copy; 2026 SafeLink - Graph-Based Public Safety System</p>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>

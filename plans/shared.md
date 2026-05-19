@@ -42,8 +42,13 @@ Implement CRUD operations for the core nodes (Incident, Location, etc.).
 - [x] Search functionality
 - [x] Dashboard metrics
 - [x] JSON backup feature
+- [x] Simple HTML/CSS/JS frontend
+- [x] User Authentication (Login/Logout, JWT)
+- [x] QR Code Integration for Incidents
+- [x] Sample Seed Data for Demo
+- [x] Project Documentation (README.md)
 - [ ] CRUD operations for other nodes (Evidence, Report)
-- [ ] Graph visualization implementation
+- [ ] Advanced Graph visualization (e.g. D3.js or Cytoscape)
 
 
 ## Core Graph Model

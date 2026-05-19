@@ -1,12 +1,27 @@
 const express = require('express');
 const router = express.Router();
 const incidentController = require('../controllers/incidentController');
+const qrController = require('../controllers/qrController');
+const { protect } = require('../middleware/authMiddleware');
+
+/**
+ * @route GET /api/incidents/:id/qrcode
+ * @desc Generate QR code for an incident
+ */
+router.get('/:id/qrcode', protect, async (req, res) => {
+    try {
+        const qrData = await qrController.generateIncidentQRCode(req.params.id);
+        res.json(qrData);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
 
 /**
  * @route GET /api/incidents
  * @desc Get all incidents
  */
-router.get('/', async (req, res) => {
+router.get('/', protect, async (req, res) => {
     try {
         const incidents = await incidentController.getAllIncidents();
         res.json(incidents);
@@ -19,7 +34,7 @@ router.get('/', async (req, res) => {
  * @route GET /api/incidents/:id
  * @desc Get incident by ID
  */
-router.get('/:id', async (req, res) => {
+router.get('/:id', protect, async (req, res) => {
     try {
         const incident = await incidentController.getIncidentById(req.params.id);
         if (!incident) {
@@ -35,7 +50,7 @@ router.get('/:id', async (req, res) => {
  * @route POST /api/incidents
  * @desc Create a new incident
  */
-router.post('/', async (req, res) => {
+router.post('/', protect, async (req, res) => {
     try {
         const incident = await incidentController.createIncident(req.body);
         res.status(201).json(incident);
@@ -48,7 +63,7 @@ router.post('/', async (req, res) => {
  * @route PUT /api/incidents/:id
  * @desc Update an incident
  */
-router.put('/:id', async (req, res) => {
+router.put('/:id', protect, async (req, res) => {
     try {
         const incident = await incidentController.updateIncident(req.params.id, req.body);
         if (!incident) {
@@ -64,7 +79,7 @@ router.put('/:id', async (req, res) => {
  * @route DELETE /api/incidents/:id
  * @desc Delete an incident
  */
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', protect, async (req, res) => {
     try {
         const success = await incidentController.deleteIncident(req.params.id);
         if (!success) {
@@ -80,7 +95,7 @@ router.delete('/:id', async (req, res) => {
  * @route POST /api/incidents/:incidentId/location/:locationId
  * @desc Connect incident to location
  */
-router.post('/:incidentId/location/:locationId', async (req, res) => {
+router.post('/:incidentId/location/:locationId', protect, async (req, res) => {
     try {
         const result = await incidentController.connectIncidentToLocation(
             req.params.incidentId,
@@ -99,7 +114,7 @@ router.post('/:incidentId/location/:locationId', async (req, res) => {
  * @route GET /api/incidents/:id/graph
  * @desc Get incident with connected location and persons
  */
-router.get('/:id/graph', async (req, res) => {
+router.get('/:id/graph', protect, async (req, res) => {
     try {
         const graph = await incidentController.getIncidentGraphExtended(req.params.id);
         if (!graph) {
@@ -115,7 +130,7 @@ router.get('/:id/graph', async (req, res) => {
  * @route POST /api/incidents/:incidentId/persons/:personId
  * @desc Connect person to incident
  */
-router.post('/:incidentId/persons/:personId', async (req, res) => {
+router.post('/:incidentId/persons/:personId', protect, async (req, res) => {
     const { relationship } = req.body;
     const allowedRelationships = ['INVOLVED_IN', 'WITNESSED', 'SUSPECTED_IN'];
 
@@ -144,7 +159,7 @@ router.post('/:incidentId/persons/:personId', async (req, res) => {
  * @route POST /api/incidents/:incidentId/responders/:responderId
  * @desc Connect responder to incident
  */
-router.post('/:incidentId/responders/:responderId', async (req, res) => {
+router.post('/:incidentId/responders/:responderId', protect, async (req, res) => {
     try {
         const result = await incidentController.connectResponderToIncident(
             req.params.incidentId,

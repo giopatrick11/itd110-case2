@@ -1,12 +1,13 @@
 const express = require('express');
 const router = express.Router();
 const responderController = require('../controllers/responderController');
+const { protect } = require('../middleware/authMiddleware');
 
 /**
  * @route GET /api/responders
  * @desc Get all responders
  */
-router.get('/', async (req, res) => {
+router.get('/', protect, async (req, res) => {
     try {
         const responders = await responderController.getAllResponders();
         res.json(responders);
@@ -19,7 +20,7 @@ router.get('/', async (req, res) => {
  * @route GET /api/responders/:id
  * @desc Get responder by ID
  */
-router.get('/:id', async (req, res) => {
+router.get('/:id', protect, async (req, res) => {
     try {
         const responder = await responderController.getResponderById(req.params.id);
         if (!responder) {
@@ -35,7 +36,7 @@ router.get('/:id', async (req, res) => {
  * @route POST /api/responders
  * @desc Create a new responder
  */
-router.post('/', async (req, res) => {
+router.post('/', protect, async (req, res) => {
     try {
         const responder = await responderController.createResponder(req.body);
         res.status(201).json(responder);
@@ -48,7 +49,7 @@ router.post('/', async (req, res) => {
  * @route PUT /api/responders/:id
  * @desc Update a responder
  */
-router.put('/:id', async (req, res) => {
+router.put('/:id', protect, async (req, res) => {
     try {
         const responder = await responderController.updateResponder(req.params.id, req.body);
         if (!responder) {
@@ -64,7 +65,7 @@ router.put('/:id', async (req, res) => {
  * @route DELETE /api/responders/:id
  * @desc Delete a responder
  */
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', protect, async (req, res) => {
     try {
         const success = await responderController.deleteResponder(req.params.id);
         if (!success) {

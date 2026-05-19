@@ -17,5 +17,10 @@ Gemini is the main development assistant for implementation, UI, dashboard, and 
 - [x] Implement Search Functionality
 - [x] Develop Dashboard metrics
 - [x] Add JSON backup/download feature
+- [x] Build simple HTML/CSS/JS frontend
+- [x] Implement User Authentication (JWT, bcrypt)
+- [x] Implement QR Code Integration
+- [x] Add realistic seed data script
+- [x] Create project README.md
 - [ ] Implement Evidence, Report CRUD
 

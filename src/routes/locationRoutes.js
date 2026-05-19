@@ -1,12 +1,13 @@
 const express = require('express');
 const router = express.Router();
 const locationController = require('../controllers/locationController');
+const { protect } = require('../middleware/authMiddleware');
 
 /**
  * @route GET /api/locations
  * @desc Get all locations
  */
-router.get('/', async (req, res) => {
+router.get('/', protect, async (req, res) => {
     try {
         const locations = await locationController.getAllLocations();
         res.json(locations);
@@ -19,7 +20,7 @@ router.get('/', async (req, res) => {
  * @route GET /api/locations/:id
  * @desc Get location by ID
  */
-router.get('/:id', async (req, res) => {
+router.get('/:id', protect, async (req, res) => {
     try {
         const location = await locationController.getLocationById(req.params.id);
         if (!location) {
@@ -35,7 +36,7 @@ router.get('/:id', async (req, res) => {
  * @route POST /api/locations
  * @desc Create a new location
  */
-router.post('/', async (req, res) => {
+router.post('/', protect, async (req, res) => {
     try {
         const location = await locationController.createLocation(req.body);
         res.status(201).json(location);
@@ -48,7 +49,7 @@ router.post('/', async (req, res) => {
  * @route PUT /api/locations/:id
  * @desc Update a location
  */
-router.put('/:id', async (req, res) => {
+router.put('/:id', protect, async (req, res) => {
     try {
         const location = await locationController.updateLocation(req.params.id, req.body);
         if (!location) {
@@ -64,7 +65,7 @@ router.put('/:id', async (req, res) => {
  * @route DELETE /api/locations/:id
  * @desc Delete a location
  */
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', protect, async (req, res) => {
     try {
         const success = await locationController.deleteLocation(req.params.id);
         if (!success) {

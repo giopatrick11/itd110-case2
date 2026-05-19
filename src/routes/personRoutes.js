@@ -1,12 +1,13 @@
 const express = require('express');
 const router = express.Router();
 const personController = require('../controllers/personController');
+const { protect } = require('../middleware/authMiddleware');
 
 /**
  * @route GET /api/persons
  * @desc Get all persons
  */
-router.get('/', async (req, res) => {
+router.get('/', protect, async (req, res) => {
     try {
         const persons = await personController.getAllPersons();
         res.json(persons);
@@ -19,7 +20,7 @@ router.get('/', async (req, res) => {
  * @route GET /api/persons/:id
  * @desc Get person by ID
  */
-router.get('/:id', async (req, res) => {
+router.get('/:id', protect, async (req, res) => {
     try {
         const person = await personController.getPersonById(req.params.id);
         if (!person) {
@@ -35,7 +36,7 @@ router.get('/:id', async (req, res) => {
  * @route POST /api/persons
  * @desc Create a new person
  */
-router.post('/', async (req, res) => {
+router.post('/', protect, async (req, res) => {
     try {
         const person = await personController.createPerson(req.body);
         res.status(201).json(person);
@@ -48,7 +49,7 @@ router.post('/', async (req, res) => {
  * @route PUT /api/persons/:id
  * @desc Update a person
  */
-router.put('/:id', async (req, res) => {
+router.put('/:id', protect, async (req, res) => {
     try {
         const person = await personController.updatePerson(req.params.id, req.body);
         if (!person) {
@@ -64,7 +65,7 @@ router.put('/:id', async (req, res) => {
  * @route DELETE /api/persons/:id
  * @desc Delete a person
  */
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', protect, async (req, res) => {
     try {
         const success = await personController.deletePerson(req.params.id);
         if (!success) {

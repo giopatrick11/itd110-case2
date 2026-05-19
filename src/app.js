@@ -9,6 +9,8 @@ const responderRoutes = require('./routes/responderRoutes');
 const searchRoutes = require('./routes/searchRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
 const backupRoutes = require('./routes/backupRoutes');
+const authRoutes = require('./routes/authRoutes');
+
 
 const app = express();
 
@@ -16,6 +18,7 @@ const app = express();
 app.use(cors());
 app.use(morgan('dev'));
 app.use(express.json());
+app.use(express.static('public'));
 
 // Routes
 app.use('/api/incidents', incidentRoutes);
@@ -25,6 +28,8 @@ app.use('/api/responders', responderRoutes);
 app.use('/api/search', searchRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/backup', backupRoutes);
+app.use('/api/auth', authRoutes);
+
 
 // Test Route
 app.get('/api/test', async (req, res) => {
