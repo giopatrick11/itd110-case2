@@ -50,7 +50,8 @@ Implement CRUD operations for the core nodes (Incident, Location, etc.).
 - [x] Incident Trends Chart (Line graph with severity filter)
 - [x] Server-side Pagination for Incidents
 - [x] Admin-gated Account Approval System
-- [ ] CRUD operations for other nodes (Evidence, Report)
+- [x] Enhanced Relationship Presentation (Narrative statements instead of technical chips)
+- [x] CRUD operations for Evidence and Report nodes
 - [ ] Advanced Graph visualization (e.g. D3.js or Cytoscape)
 
 

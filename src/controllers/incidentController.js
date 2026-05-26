@@ -268,9 +268,13 @@ const getIncidentGraphExtended = async (id) => {
              WITH i, l
              OPTIONAL MATCH (p:Person)-[r]->(i)
              WHERE type(r) IN ["INVOLVED_IN", "WITNESSED", "SUSPECTED_IN"]
-             WITH i, l, collect(CASE WHEN p IS NOT NULL THEN {person: properties(p), relationship: type(r)} END) as persons
+             WITH i, l, collect(DISTINCT CASE WHEN p IS NOT NULL THEN {person: properties(p), relationship: type(r)} END) as persons
              OPTIONAL MATCH (res:Responder)-[rel:RESPONDED_TO]->(i)
-             RETURN i, l, persons, collect(CASE WHEN res IS NOT NULL THEN properties(res) END) as responders`,
+             WITH i, l, persons, collect(DISTINCT CASE WHEN res IS NOT NULL THEN properties(res) END) as responders
+             OPTIONAL MATCH (e:Evidence)-[:RELATED_TO]->(i)
+             WITH i, l, persons, responders, collect(DISTINCT CASE WHEN e IS NOT NULL THEN properties(e) END) as evidence
+             OPTIONAL MATCH (rep:Report)-[:DOCUMENTS]->(i)
+             RETURN i, l, persons, responders, evidence, collect(DISTINCT CASE WHEN rep IS NOT NULL THEN properties(rep) END) as reports`,
             { id }
         );
         if (result.records.length === 0) return null;
@@ -280,12 +284,16 @@ const getIncidentGraphExtended = async (id) => {
         const location = locationNode ? locationNode.properties : null;
         const persons = result.records[0].get('persons');
         const responders = result.records[0].get('responders');
+        const evidence = result.records[0].get('evidence');
+        const reports = result.records[0].get('reports');
         
         return {
             ...incident,
             location,
             persons,
-            responders
+            responders,
+            evidence,
+            reports
         };
     } finally {
         await session.close();

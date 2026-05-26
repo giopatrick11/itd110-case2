@@ -10,6 +10,8 @@ const searchRoutes = require('./routes/searchRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
 const backupRoutes = require('./routes/backupRoutes');
 const authRoutes = require('./routes/authRoutes');
+const evidenceRoutes = require('./routes/evidenceRoutes');
+const reportRoutes = require('./routes/reportRoutes');
 
 
 const app = express();
@@ -29,6 +31,8 @@ app.use('/api/search', searchRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/backup', backupRoutes);
 app.use('/api/auth', authRoutes);
+app.use('/api/evidence', evidenceRoutes);
+app.use('/api/reports', reportRoutes);
 
 
 // Test Route

@@ -25,5 +25,8 @@ Gemini is the main development assistant for implementation, UI, dashboard, and 
 - [x] Implement Incident Trends Chart (Line graph with severity filter)
 - [x] Implement Pagination for Incidents
 - [x] Implement Account Approval System (Admin-gated registration)
-- [ ] Implement Evidence, Report CRUD
+- [x] Enhance Relationship Display (Narrative statements for OCCURRED_AT, RESPONDED_TO, etc.)
+- [x] Implement Admin Incident Editing (Title, Date, Category, Status, Severity, Description)
+- [x] Implement Evidence, Report CRUD & Relationships
+- [ ] Advanced Graph visualization (e.g. D3.js or Cytoscape)
 

@@ -37,6 +37,7 @@ let dashboardData = null;
 let trendsChart = null;
 let currentPage = 1;
 let totalPages = 1;
+let editingIncidentId = null;
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
@@ -57,6 +58,11 @@ function setupEventListeners() {
 
     // Modals
     document.getElementById('open-incident-form').addEventListener('click', () => {
+        editingIncidentId = null;
+        document.getElementById('modal-title').textContent = 'Report New Incident';
+        document.getElementById('modal-description').textContent = 'Record the details of a new public safety event.';
+        incidentForm.querySelector('button[type="submit"]').textContent = 'Submit to Logs';
+        incidentForm.reset();
         incidentModal.classList.remove('hidden');
     });
 
@@ -455,14 +461,45 @@ function renderIncidentList(incidents, containerId) {
     `).join('');
 }
 
+function startEditing(incident) {
+    editingIncidentId = incident.id;
+    
+    // Fill form
+    incidentForm.title.value = incident.title;
+    incidentForm.type.value = incident.type;
+    incidentForm.status.value = incident.status;
+    incidentForm.severity.value = incident.severity;
+    
+    // Format date for datetime-local input
+    if (incident.date) {
+        const d = new Date(incident.date);
+        const formattedDate = d.toISOString().slice(0, 16);
+        incidentForm.date.value = formattedDate;
+    }
+    
+    incidentForm.description.value = incident.description;
+    
+    // Update modal UI
+    document.getElementById('modal-title').textContent = 'Edit Incident Record';
+    document.getElementById('modal-description').textContent = 'Modify the specific details and properties of this incident.';
+    incidentForm.querySelector('button[type="submit"]').textContent = 'Save Changes';
+    
+    // Switch modals
+    detailModal.classList.add('hidden');
+    incidentModal.classList.remove('hidden');
+}
+
 async function handleIncidentSubmit(e) {
     e.preventDefault();
     const formData = new FormData(incidentForm);
     const data = Object.fromEntries(formData.entries());
 
     try {
-        const response = await authFetch(`${API_URL}/incidents`, {
-            method: 'POST',
+        const url = editingIncidentId ? `${API_URL}/incidents/${editingIncidentId}` : `${API_URL}/incidents`;
+        const method = editingIncidentId ? 'PUT' : 'POST';
+
+        const response = await authFetch(url, {
+            method: method,
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
         });
@@ -470,11 +507,18 @@ async function handleIncidentSubmit(e) {
         if (response.ok) {
             incidentModal.classList.add('hidden');
             incidentForm.reset();
-            if (currentSection === 'incidents') loadIncidents(1);
+            editingIncidentId = null;
+            
+            if (currentSection === 'incidents') loadIncidents(currentPage);
             else if (currentSection === 'dashboard') loadDashboard();
+            
+            // If we were viewing detail, refresh it
+            if (window.location.hash.includes('incident=')) {
+                handleHashChange();
+            }
         }
     } catch (error) {
-        console.error('Error creating incident:', error);
+        console.error('Error submitting incident:', error);
     }
 }
 
@@ -506,51 +550,74 @@ async function viewIncidentDetail(id) {
         
         let html = `
             <div style="margin-bottom: 2rem;">
-                <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
-                    <span class="badge badge-${data.status}">${data.status}</span>
-                    <span class="badge badge-${data.severity}">${data.severity}</span>
-                    <span class="badge" style="background: #f1f5f9; color: var(--text-muted)">${data.type}</span>
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
+                    <div style="display: flex; gap: 0.5rem;">
+                        <span class="badge badge-${data.status}">${data.status}</span>
+                        <span class="badge badge-${data.severity}">${data.severity}</span>
+                        <span class="badge" style="background: #f1f5f9; color: var(--text-muted)">${data.type}</span>
+                    </div>
+                    ${userRole === 'Admin' ? `
+                        <button onclick='startEditing(${JSON.stringify(data).replace(/'/g, "&apos;")})' class="btn btn-secondary" style="font-size: 0.75rem; padding: 0.4rem 0.8rem;">Edit Record</button>
+                    ` : ''}
                 </div>
                 <p style="color: var(--text-muted); font-size: 0.875rem; margin-bottom: 1rem;">Occurred on ${new Date(data.date).toLocaleString()}</p>
                 <p style="font-size: 1rem; line-height: 1.6;">${data.description}</p>
             </div>
             
             <div style="background: var(--bg-main); padding: 1.5rem; border-radius: 12px; border: 1px solid var(--border);">
-                <h4 style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin-bottom: 1rem;">Graph Connections</h4>
+                <h4 style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin-bottom: 1rem;">Contextual Intelligence</h4>
                 
                 <div style="margin-bottom: 1.5rem;">
-                    <p style="font-size: 0.875rem; font-weight: 600; margin-bottom: 0.5rem;">Location</p>
-                    <div class="chip-container">
+                    <p style="font-size: 0.875rem; font-weight: 600; margin-bottom: 0.5rem;">Location Context</p>
+                    <div style="font-size: 0.875rem; color: var(--text-main); line-height: 1.5;">
                         ${data.location ? `
-                            <div class="chip">
-                                <span class="chip-label">OCCURRED_AT</span>
-                                <span>${data.location.name}</span>
-                            </div>
-                        ` : '<span style="color: var(--text-muted); font-size: 0.875rem;">No location associated</span>'}
+                            <p>This incident <strong>occurred at</strong> <span style="color: var(--primary); font-weight: 500;">${data.location.name}</span>.</p>
+                            <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem;">Address: ${data.location.address}</p>
+                        ` : '<p style="color: var(--text-muted);">No location data recorded for this incident.</p>'}
                     </div>
                 </div>
 
                 <div style="margin-bottom: 1.5rem;">
-                    <p style="font-size: 0.875rem; font-weight: 600; margin-bottom: 0.5rem;">People Involved</p>
-                    <div class="chip-container">
-                        ${data.persons && data.persons.length > 0 ? data.persons.map(p => `
-                            <div class="chip">
-                                <span class="chip-label">${p.relationship}</span>
-                                <span>${p.person.firstName} ${p.person.lastName}</span>
-                            </div>
-                        `).join('') : '<span style="color: var(--text-muted); font-size: 0.875rem;">No people associated</span>'}
+                    <p style="font-size: 0.875rem; font-weight: 600; margin-bottom: 0.5rem;">Persons of Interest & Witnesses</p>
+                    <div style="font-size: 0.875rem; color: var(--text-main); line-height: 1.6;">
+                        ${data.persons && data.persons.length > 0 ? data.persons.map(p => {
+                            let relText = '';
+                            switch(p.relationship) {
+                                case 'INVOLVED_IN': relText = 'was <strong>directly involved</strong> in'; break;
+                                case 'WITNESSED': relText = '<strong>witnessed</strong>'; break;
+                                case 'SUSPECTED_IN': relText = 'is a <strong>suspect</strong> in'; break;
+                                default: relText = 'is connected to';
+                            }
+                            return `<p><span style="font-weight: 500;">${p.person.firstName} ${p.person.lastName}</span> ${relText} this incident.</p>`;
+                        }).join('') : '<p style="color: var(--text-muted);">No persons have been linked to this record.</p>'}
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 1.5rem;">
+                    <p style="font-size: 0.875rem; font-weight: 600; margin-bottom: 0.5rem;">Response Personnel</p>
+                    <div style="font-size: 0.875rem; color: var(--text-main); line-height: 1.6;">
+                        ${data.responders && data.responders.length > 0 ? data.responders.map(r => `
+                            <p><span style="font-weight: 500;">${r.name}</span> from <span style="color: var(--text-muted);">${r.agency}</span> <strong>responded to</strong> this call.</p>
+                        `).join('') : '<p style="color: var(--text-muted);">No emergency responders have been logged for this incident.</p>'}
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 1.5rem;">
+                    <p style="font-size: 0.875rem; font-weight: 600; margin-bottom: 0.5rem;">Physical & Digital Evidence</p>
+                    <div style="font-size: 0.875rem; color: var(--text-main); line-height: 1.6;">
+                        ${data.evidence && data.evidence.length > 0 ? data.evidence.map(e => `
+                            <p><span style="font-weight: 500;">${e.name}</span> (${e.type}) was <strong>recovered</strong> and is currently <span style="color: var(--primary); font-weight: 500;">${e.status}</span>.</p>
+                        `).join('') : '<p style="color: var(--text-muted);">No evidence has been linked to this record.</p>'}
                     </div>
                 </div>
 
                 <div>
-                    <p style="font-size: 0.875rem; font-weight: 600; margin-bottom: 0.5rem;">Emergency Responders</p>
-                    <div class="chip-container">
-                        ${data.responders && data.responders.length > 0 ? data.responders.map(r => `
-                            <div class="chip">
-                                <span class="chip-label">RESPONDED_TO</span>
-                                <span>${r.name} (${r.agency})</span>
-                            </div>
-                        `).join('') : '<span style="color: var(--text-muted); font-size: 0.875rem;">No responders associated</span>'}
+                    <p style="font-size: 0.875rem; font-weight: 600; margin-bottom: 0.5rem;">Formal Documentation</p>
+                    <div style="font-size: 0.875rem; color: var(--text-main); line-height: 1.6;">
+                        ${data.reports && data.reports.length > 0 ? data.reports.map(rep => `
+                            <p>Case Report <span style="font-weight: 500;">#${rep.reportNumber}</span> <strong>documents</strong> this incident.</p>
+                            <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem;">Summary: ${rep.summary}</p>
+                        `).join('') : '<p style="color: var(--text-muted);">No formal reports have been filed for this incident.</p>'}
                     </div>
                 </div>
             </div>

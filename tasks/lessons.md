@@ -6,3 +6,4 @@
 - Keep the scope simple enough to finish: Incident, Location, Person, Responder, Evidence, and Report.
 - Prioritize required features before bonus features.
 - Make the graph visualization central to the demo because it shows the advantage of Neo4j.
+- Use narrative "statements" (e.g., "Officer X responded to Incident Y") instead of technical relationship labels (e.g., "RESPONDED_TO") for better UX in public safety domains.
