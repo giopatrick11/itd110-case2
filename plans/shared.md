@@ -41,7 +41,7 @@ Implement CRUD operations for the core nodes (Incident, Location, etc.).
 - [x] Responder-Incident relationship (RESPONDED_TO)
 - [x] Search functionality
 - [x] Dashboard metrics
-- [x] JSON backup feature
+- [x] JSON backup feature (Admin-restricted)
 - [x] Simple HTML/CSS/JS frontend
 - [x] User Authentication (Login/Logout, JWT)
 - [x] QR Code Integration for Incidents
@@ -52,6 +52,7 @@ Implement CRUD operations for the core nodes (Incident, Location, etc.).
 - [x] Admin-gated Account Approval System
 - [x] Enhanced Relationship Presentation (Narrative statements instead of technical chips)
 - [x] CRUD operations for Evidence and Report nodes
+- [x] Incident Status Locking (Close/Reopen) and constraints
 - [ ] Advanced Graph visualization (e.g. D3.js or Cytoscape)
 
 

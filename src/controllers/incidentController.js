@@ -102,12 +102,22 @@ const updateIncident = async (id, incidentData) => {
     const now = new Date().toISOString();
     
     try {
+        // Check if current record is closed
+        const current = await session.run(
+            'MATCH (i:Incident {id: $id}) RETURN i.status as status',
+            { id }
+        );
+        
+        if (current.records.length === 0) return null;
+        if (current.records[0].get('status') === 'Closed') {
+            throw new Error('This record is CLOSED and cannot be modified. Please reopen it to make changes.');
+        }
+
         const result = await session.run(
             `MATCH (i:Incident {id: $id})
              SET i.title = $title,
                  i.type = $type,
                  i.description = $description,
-                 i.status = $status,
                  i.severity = $severity,
                  i.date = $date,
                  i.updatedAt = $updatedAt
@@ -117,7 +127,6 @@ const updateIncident = async (id, incidentData) => {
                 title: incidentData.title,
                 type: incidentData.type,
                 description: incidentData.description,
-                status: incidentData.status,
                 severity: incidentData.severity,
                 date: incidentData.date,
                 updatedAt: now
@@ -202,6 +211,17 @@ const getIncidentGraph = async (id) => {
 const connectPersonToIncident = async (incidentId, personId, relationship) => {
     const session = getSession();
     try {
+        // First, check if the incident is closed
+        const statusCheck = await session.run(
+            'MATCH (i:Incident {id: $incidentId}) RETURN i.status as status',
+            { incidentId }
+        );
+
+        if (statusCheck.records.length === 0) return null;
+        if (statusCheck.records[0].get('status') === 'Closed') {
+            throw new Error('This record is CLOSED and cannot be modified. Please reopen it to add new links.');
+        }
+
         // Use APOC or simple dynamic relationship creation if possible, 
         // but here we use a switch/case to be safe with standard Cypher parameters
         let query = '';
@@ -234,11 +254,43 @@ const connectPersonToIncident = async (incidentId, personId, relationship) => {
 };
 
 /**
+ * Toggle incident status
+ */
+const toggleIncidentStatus = async (id) => {
+    const session = getSession();
+    const now = new Date().toISOString();
+    try {
+        const result = await session.run(
+            `MATCH (i:Incident {id: $id})
+             SET i.status = CASE WHEN i.status = 'Closed' THEN 'Open' ELSE 'Closed' END,
+                 i.updatedAt = $now
+             RETURN i`,
+            { id, now }
+        );
+        if (result.records.length === 0) return null;
+        return result.records[0].get('i').properties;
+    } finally {
+        await session.close();
+    }
+};
+
+/**
  * Connect responder to incident
  */
 const connectResponderToIncident = async (incidentId, responderId) => {
     const session = getSession();
     try {
+        // Check if the incident is closed
+        const statusCheck = await session.run(
+            'MATCH (i:Incident {id: $incidentId}) RETURN i.status as status',
+            { incidentId }
+        );
+
+        if (statusCheck.records.length === 0) return null;
+        if (statusCheck.records[0].get('status') === 'Closed') {
+            throw new Error('This record is CLOSED and cannot be modified. Please reopen it to add new responders.');
+        }
+
         const result = await session.run(
             `MATCH (r:Responder {id: $responderId})
              MATCH (i:Incident {id: $incidentId})
@@ -300,6 +352,60 @@ const getIncidentGraphExtended = async (id) => {
     }
 };
 
+/**
+ * Unlink person from incident
+ */
+const unlinkPersonFromIncident = async (incidentId, personId) => {
+    const session = getSession();
+    try {
+        // Check if the incident is closed
+        const statusCheck = await session.run(
+            'MATCH (i:Incident {id: $incidentId}) RETURN i.status as status',
+            { incidentId }
+        );
+
+        if (statusCheck.records.length > 0 && statusCheck.records[0].get('status') === 'Closed') {
+            throw new Error('This record is CLOSED and cannot be modified. Please reopen it to remove links.');
+        }
+
+        await session.run(
+            `MATCH (p:Person {id: $personId})-[r]->(i:Incident {id: $incidentId})
+             WHERE type(r) IN ["INVOLVED_IN", "WITNESSED", "SUSPECTED_IN"]
+             DELETE r`,
+            { incidentId, personId }
+        );
+    } finally {
+        await session.close();
+    }
+};
+
+/**
+ * Unlink responder from incident
+ */
+const unlinkResponderFromIncident = async (incidentId, responderId) => {
+    const session = getSession();
+    try {
+        // Check if the incident is closed
+        const statusCheck = await session.run(
+            'MATCH (i:Incident {id: $incidentId}) RETURN i.status as status',
+            { incidentId }
+        );
+
+        if (statusCheck.records.length > 0 && statusCheck.records[0].get('status') === 'Closed') {
+            throw new Error('This record is CLOSED and cannot be modified. Please reopen it to remove responders.');
+        }
+
+        await session.run(
+            `MATCH (res:Responder {id: $responderId})-[r:RESPONDED_TO]->(i:Incident {id: $incidentId})
+             DELETE r`,
+            { incidentId, responderId }
+        );
+        return true;
+    } finally {
+        await session.close();
+    }
+};
+
 module.exports = {
     getAllIncidents,
     getIncidentById,
@@ -310,5 +416,8 @@ module.exports = {
     getIncidentGraph,
     connectPersonToIncident,
     getIncidentGraphExtended,
-    connectResponderToIncident
+    connectResponderToIncident,
+    toggleIncidentStatus,
+    unlinkPersonFromIncident,
+    unlinkResponderFromIncident
 };

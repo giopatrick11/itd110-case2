@@ -20,7 +20,7 @@
                 <button id="show-dashboard">Dashboard</button>
                 <button id="show-incidents">Incidents</button>
                 <button id="show-search">Search</button>
-                <button id="show-approvals" class="hidden">Create Access</button>
+                <button id="show-approvals" class="hidden">User Management</button>
                 <button id="download-backup" class="btn btn-secondary" style="margin-left: 1rem;">Export JSON</button>
                 <button id="logout-btn" class="btn btn-danger">Logout</button>
             </nav>
@@ -75,13 +75,6 @@
                             <option value="Responder">First Responder</option>
                             <option value="Official">Safety Official</option>
                             <option value="Admin">System Administrator</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Initial Status</label>
-                        <select name="status">
-                            <option value="Active">Active (Immediate Access)</option>
-                            <option value="Pending">Pending (Requires Later Approval)</option>
                         </select>
                     </div>
                     <button type="submit" class="btn btn-primary w-100" style="margin-top: 1rem;">Create Personnel Account</button>
@@ -175,17 +168,18 @@
         <!-- Approvals Section -->
         <section id="approvals-section" class="hidden">
             <div class="section-header">
-                <h2>Create Access</h2>
+                <h2>User Management</h2>
                 <button id="open-register-form" class="btn btn-primary">+ Add Personnel</button>
             </div>
-            <p style="color: var(--text-muted); margin-bottom: 2rem;">Review and manage personnel requests for system access.</p>
+            <p style="color: var(--text-muted); margin-bottom: 2rem;">Manage existing users and pending access requests.</p>
             <div id="approvals-list" class="recent-list" style="max-width: 100%;">
                 <table style="width: 100%; border-collapse: collapse;">
                     <thead>
                         <tr style="text-align: left; border-bottom: 2px solid var(--border);">
                             <th style="padding: 1rem;">Name</th>
                             <th style="padding: 1rem;">Email</th>
-                            <th style="padding: 1rem;">Requested Role</th>
+                            <th style="padding: 1rem;">Role</th>
+                            <th style="padding: 1rem;">Status</th>
                             <th style="padding: 1rem;">Date</th>
                             <th style="padding: 1rem; text-align: right;">Actions</th>
                         </tr>
@@ -214,14 +208,6 @@
                     </div>
                     <div class="form-row" style="display: flex; gap: 1rem;">
                         <div class="form-group" style="flex: 1;">
-                            <label>Initial Status</label>
-                            <select name="status">
-                                <option value="Open">Open</option>
-                                <option value="Pending">Pending</option>
-                                <option value="Closed">Closed</option>
-                            </select>
-                        </div>
-                        <div class="form-group" style="flex: 1;">
                             <label>Severity Level</label>
                             <select name="severity">
                                 <option value="Low">Low</option>
@@ -246,10 +232,23 @@
 
         <!-- Detail Modal (Graph View) -->
         <div id="detail-modal" class="modal hidden">
-            <div class="modal-content">
+            <div class="modal-content" style="max-width: 800px;">
                 <span class="close-modal">&times;</span>
                 <h2 id="detail-title">Incident Details</h2>
                 <div id="detail-body"></div>
+            </div>
+        </div>
+
+        <!-- Link Entity Modal -->
+        <div id="link-modal" class="modal hidden">
+            <div class="modal-content">
+                <span class="close-modal">&times;</span>
+                <h2 id="link-modal-title">Link Information</h2>
+                <p id="link-modal-description" style="color: var(--text-muted); margin-bottom: 2rem;">Add related information to this incident record.</p>
+                <form id="link-form">
+                    <div id="link-form-fields"></div>
+                    <button type="submit" class="btn btn-primary w-100" style="margin-top: 1rem;">Confirm Link</button>
+                </form>
             </div>
         </div>
 

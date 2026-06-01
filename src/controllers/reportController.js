@@ -22,6 +22,8 @@ const createReport = async (reportData) => {
     const id = uuidv4();
     const now = new Date().toISOString();
     
+    console.log('Creating Report:', reportData);
+    
     try {
         const result = await session.run(
             `CREATE (r:Report {

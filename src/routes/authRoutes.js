@@ -104,4 +104,20 @@ router.delete('/deny/:id', protect, async (req, res) => {
     }
 });
 
+/**
+ * @route GET /api/auth/users
+ * @desc Get all users (Admin only)
+ */
+router.get('/users', protect, async (req, res) => {
+    if (req.user.role !== 'Admin') {
+        return res.status(403).json({ error: 'Access denied. Administrators only.' });
+    }
+    try {
+        const users = await authController.getAllUsers();
+        res.json(users);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 module.exports = router;

@@ -173,11 +173,31 @@ const getUserById = async (id) => {
     }
 };
 
+/**
+ * Get all users (Admin only)
+ */
+const getAllUsers = async () => {
+    const session = getSession();
+    try {
+        const result = await session.run(
+            'MATCH (u:User) RETURN u ORDER BY u.createdAt DESC'
+        );
+        return result.records.map(r => {
+            const user = r.get('u').properties;
+            delete user.passwordHash;
+            return user;
+        });
+    } finally {
+        await session.close();
+    }
+};
+
 module.exports = {
     register,
     login,
     getUserById,
     getPendingUsers,
     approveUser,
-    denyUser
+    denyUser,
+    getAllUsers
 };

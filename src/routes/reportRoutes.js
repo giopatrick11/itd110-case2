@@ -13,6 +13,9 @@ router.get('/', protect, async (req, res) => {
 });
 
 router.post('/', protect, async (req, res) => {
+    if (req.user.role === 'Responder') {
+        return res.status(403).json({ message: 'First Responders have view-only access.' });
+    }
     try {
         const result = await reportController.createReport(req.body);
         res.status(201).json(result);
@@ -22,6 +25,9 @@ router.post('/', protect, async (req, res) => {
 });
 
 router.delete('/:id', protect, async (req, res) => {
+    if (req.user.role === 'Responder') {
+        return res.status(403).json({ message: 'First Responders have view-only access.' });
+    }
     try {
         await reportController.deleteReport(req.params.id);
         res.json({ message: 'Report deleted' });

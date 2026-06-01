@@ -53,6 +53,11 @@ router.get('/:id', protect, async (req, res) => {
  * @desc Create a new incident
  */
 router.post('/', protect, async (req, res) => {
+    // First Responders are view-only
+    if (req.user.role === 'Responder') {
+        return res.status(403).json({ message: 'First Responders have view-only access.' });
+    }
+    
     try {
         const incident = await incidentController.createIncident(req.body);
         res.status(201).json(incident);
@@ -66,6 +71,11 @@ router.post('/', protect, async (req, res) => {
  * @desc Update an incident
  */
 router.put('/:id', protect, async (req, res) => {
+    // Only admins or officials can edit
+    if (req.user.role === 'Responder') {
+        return res.status(403).json({ message: 'First Responders have view-only access.' });
+    }
+
     try {
         const incident = await incidentController.updateIncident(req.params.id, req.body);
         if (!incident) {
@@ -82,6 +92,11 @@ router.put('/:id', protect, async (req, res) => {
  * @desc Delete an incident
  */
 router.delete('/:id', protect, async (req, res) => {
+    // Only admins can delete
+    if (req.user.role !== 'Admin') {
+        return res.status(403).json({ message: 'Only administrators can delete records.' });
+    }
+
     try {
         const success = await incidentController.deleteIncident(req.params.id);
         if (!success) {
@@ -94,10 +109,34 @@ router.delete('/:id', protect, async (req, res) => {
 });
 
 /**
+ * @route PATCH /api/incidents/:id/status
+ * @desc Toggle incident status (Admin only)
+ */
+router.patch('/:id/status', protect, async (req, res) => {
+    // Only admins can toggle status
+    if (req.user.role !== 'Admin') {
+        return res.status(403).json({ message: 'Only administrators can change incident status' });
+    }
+
+    try {
+        const incident = await incidentController.toggleIncidentStatus(req.params.id);
+        if (!incident) {
+            return res.status(404).json({ message: 'Incident not found' });
+        }
+        res.json(incident);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+/**
  * @route POST /api/incidents/:incidentId/location/:locationId
  * @desc Connect incident to location
  */
 router.post('/:incidentId/location/:locationId', protect, async (req, res) => {
+    if (req.user.role === 'Responder') {
+        return res.status(403).json({ message: 'First Responders have view-only access.' });
+    }
     try {
         const result = await incidentController.connectIncidentToLocation(
             req.params.incidentId,
@@ -133,6 +172,9 @@ router.get('/:id/graph', protect, async (req, res) => {
  * @desc Connect person to incident
  */
 router.post('/:incidentId/persons/:personId', protect, async (req, res) => {
+    if (req.user.role === 'Responder') {
+        return res.status(403).json({ message: 'First Responders have view-only access.' });
+    }
     const { relationship } = req.body;
     const allowedRelationships = ['INVOLVED_IN', 'WITNESSED', 'SUSPECTED_IN'];
 
@@ -162,6 +204,9 @@ router.post('/:incidentId/persons/:personId', protect, async (req, res) => {
  * @desc Connect responder to incident
  */
 router.post('/:incidentId/responders/:responderId', protect, async (req, res) => {
+    if (req.user.role === 'Responder') {
+        return res.status(403).json({ message: 'First Responders have view-only access.' });
+    }
     try {
         const result = await incidentController.connectResponderToIncident(
             req.params.incidentId,
@@ -171,6 +216,32 @@ router.post('/:incidentId/responders/:responderId', protect, async (req, res) =>
             return res.status(404).json({ message: 'Incident or Responder not found' });
         }
         res.json(result);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+/**
+ * @route DELETE /api/incidents/:incidentId/persons/:personId
+ * @desc Unlink person from incident
+ */
+router.delete('/:incidentId/persons/:personId', protect, async (req, res) => {
+    try {
+        await incidentController.unlinkPersonFromIncident(req.params.incidentId, req.params.personId);
+        res.json({ message: 'Person unlinked' });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+/**
+ * @route DELETE /api/incidents/:incidentId/responders/:responderId
+ * @desc Unlink responder from incident
+ */
+router.delete('/:incidentId/responders/:responderId', protect, async (req, res) => {
+    try {
+        await incidentController.unlinkResponderFromIncident(req.params.incidentId, req.params.responderId);
+        res.json({ message: 'Responder unlinked' });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }

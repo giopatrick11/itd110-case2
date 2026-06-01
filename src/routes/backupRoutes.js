@@ -8,6 +8,11 @@ const { protect } = require('../middleware/authMiddleware');
  * @desc Export all graph data as a JSON file
  */
 router.get('/', protect, async (req, res) => {
+    // Only admins can download backups
+    if (req.user.role !== 'Admin') {
+        return res.status(403).json({ message: 'Only administrators can export system data' });
+    }
+    
     try {
         const data = await backupController.exportBackupData();
         

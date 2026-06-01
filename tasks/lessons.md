@@ -7,3 +7,4 @@
 - Prioritize required features before bonus features.
 - Make the graph visualization central to the demo because it shows the advantage of Neo4j.
 - Use narrative "statements" (e.g., "Officer X responded to Incident Y") instead of technical relationship labels (e.g., "RESPONDED_TO") for better UX in public safety domains.
+- Ensure that when a feature is "implemented", both frontend and backend components are present and correctly connected. (Mistake: QR Code button called a non-existent frontend function).

@@ -22,6 +22,8 @@ const createEvidence = async (evidenceData) => {
     const id = uuidv4();
     const now = new Date().toISOString();
     
+    console.log('Creating Evidence:', evidenceData);
+    
     try {
         const result = await session.run(
             `CREATE (e:Evidence {
